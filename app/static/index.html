@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Insurance RAG - Test Console</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1a1d21; --muted: #6b7280;
+    --line: #e3e6ea; --accent: #2563eb; --accent-ink: #ffffff;
+    --ok: #15803d; --warn: #b45309; --err: #b91c1c;
+    --code-bg: #f2f4f7; --mark: #fef3c7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171a; --panel: #1c2024; --ink: #e8eaed; --muted: #9aa3ad;
+      --line: #2c3238; --accent: #3b82f6; --accent-ink: #ffffff;
+      --ok: #4ade80; --warn: #fbbf24; --err: #f87171;
+      --code-bg: #23282e; --mark: #4a3d16;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.55 -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+  header {
+    background: var(--panel); border-bottom: 1px solid var(--line);
+    padding: 14px 20px; display: flex; align-items: center; gap: 16px;
+    flex-wrap: wrap; position: sticky; top: 0; z-index: 5;
+  }
+  h1 { font-size: 15px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
+  .status { font-size: 12.5px; color: var(--muted); margin-left: auto; display: flex; gap: 14px; align-items: center; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; margin-right: 5px; }
+  .dot.up { background: var(--ok); } .dot.down { background: var(--err); }
+  main { max-width: 1180px; margin: 0 auto; padding: 20px; display: grid; gap: 18px; grid-template-columns: 1fr 340px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
+  textarea, input, select {
+    width: 100%; font: inherit; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 7px; padding: 9px 11px;
+  }
+  textarea { resize: vertical; min-height: 76px; }
+  .row { display: flex; gap: 10px; align-items: flex-end; margin-top: 10px; flex-wrap: wrap; }
+  .field { flex: 0 0 auto; } .field label { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
+  .field input, .field select { width: 88px; }
+  button {
+    font: inherit; font-weight: 550; cursor: pointer; border-radius: 7px;
+    border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); padding: 9px 16px;
+  }
+  button.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .answer { white-space: pre-wrap; margin-top: 14px; padding: 14px; background: var(--code-bg); border-radius: 8px; min-height: 40px; }
+  .answer:empty { display: none; }
+  .meta { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+  .pill { padding: 2px 8px; border-radius: 20px; border: 1px solid var(--line); }
+  .pill.grounded { color: var(--ok); border-color: currentColor; }
+  .pill.ungrounded { color: var(--warn); border-color: currentColor; }
+  .src { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 9px; }
+  .src-head { display: flex; gap: 10px; align-items: baseline; font-size: 12.5px; flex-wrap: wrap; }
+  .src-num { font-weight: 700; color: var(--accent); }
+  .src-cite { font-weight: 550; }
+  .src-score { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .bar { height: 3px; background: var(--line); border-radius: 2px; margin-top: 7px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--accent); }
+  .excerpt { font-size: 12.5px; color: var(--muted); margin-top: 7px; white-space: pre-wrap; max-height: 5.6em; overflow: hidden; }
+  .excerpt.open { max-height: none; }
+  .doc { display: flex; gap: 8px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+  .doc:last-child { border-bottom: 0; }
+  .doc-name { font-weight: 550; word-break: break-all; }
+  .doc-meta { margin-left: auto; color: var(--muted); white-space: nowrap; }
+  .err { color: var(--err); border: 1px solid currentColor; border-radius: 8px; padding: 11px; margin-top: 12px; font-size: 13px; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  mark { background: var(--mark); color: inherit; padding: 0 2px; border-radius: 3px; }
+  .drop { border: 1.5px dashed var(--line); border-radius: 8px; padding: 16px; text-align: center; color: var(--muted); font-size: 12.5px; cursor: pointer; }
+  .drop.over { border-color: var(--accent); color: var(--accent); }
+  .examples { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
+  .examples button { font-size: 12px; padding: 5px 10px; font-weight: 450; }
+  .spin { display: inline-block; width: 11px; height: 11px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: r .7s linear infinite; vertical-align: -1px; }
+  @keyframes r { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Insurance RAG &middot; Test Console</h1>
+  <div class="status">
+    <label style="display:flex;gap:6px;align-items:center;">
+      <span>API</span>
+      <input id="base" placeholder="(same origin)" spellcheck="false"
+             style="width:190px;font-size:12.5px;padding:5px 8px;">
+    </label>
+    <span><span class="dot" id="dot"></span><span id="health">checking...</span></span>
+    <label style="display:flex;gap:6px;align-items:center;">
+      <input type="checkbox" id="stream" style="width:auto;"> stream
+    </label>
+  </div>
+</header>
+
+<main>
+  <section>
+    <div class="card">
+      <h2>Ask a question</h2>
+      <textarea id="q" placeholder="e.g. What is the excess on a claim? What are the exclusions?"></textarea>
+      <div class="examples" id="examples"></div>
+      <div class="row">
+        <div class="field" style="flex:1 1 240px;">
+          <label for="doc">restrict to document</label>
+          <select id="doc" style="width:100%"><option value="">all documents</option></select>
+        </div>
+        <button id="ask">Ask</button>
+        <button id="probe" class="ghost" title="Retrieval only - no model call, no cost">Retrieval only</button>
+        <button id="clear" class="ghost">Clear</button>
+      </div>
+      <div class="hint">Ctrl+Enter to submit. <b>Retrieval only</b> shows what would be sent to the model, without calling it &mdash; free, and the quickest way to tell a retrieval problem from a prompt problem.</div>
+      <div id="error"></div>
+      <div class="answer" id="answer"></div>
+      <div class="meta" id="meta"></div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <h2>Retrieved sources <span id="srccount" style="text-transform:none;letter-spacing:0"></span></h2>
+      <div id="sources"><div class="hint">Ask a question to see which chunks were retrieved, and how strongly they matched.</div></div>
+    </div>
+  </section>
+
+  <aside>
+    <div class="card">
+      <h2>Upload a policy PDF</h2>
+      <div class="drop" id="drop">Drop a PDF here, or click to choose</div>
+      <input type="file" id="file" accept="application/pdf" hidden>
+      <div id="uploadmsg"></div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <h2>Indexed documents</h2>
+      <div id="docs"><div class="hint">loading...</div></div>
+      <button class="ghost" id="refresh" style="margin-top:12px;width:100%;">Refresh</button>
+    </div>
+  </aside>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// --- API base URL -----------------------------------------------------------
+// The console used to hardcode a relative "/api/v1", which only works when the
+// page is SERVED BY the API (http://127.0.0.1:8000/). Opened straight from disk
+// as file:///.../index.html, that resolved to file:///api/v1/... and every call
+// failed with no useful error. So the base is resolved, editable and persisted.
+const DEFAULT_BASE = "http://127.0.0.1:8000";
+
+function store(key, value) { try { if (value === undefined) return localStorage.getItem(key); localStorage.setItem(key, value); } catch { return null; } }
+
+function resolveBase() {
+  const saved = store("apiBase");
+  if (saved !== null && saved !== undefined) return saved;
+  // A file:// page has no server to be relative to, so it needs an absolute base.
+  return location.protocol === "http:" || location.protocol === "https:" ? "" : DEFAULT_BASE;
+}
+
+let BASE = resolveBase();
+
+// Threaded across turns. The server mints it on the first answer. It does NOT
+// yet affect retrieval - there is no conversation memory - so it is only a
+// handle for grouping turns; see the note in schemas/chat.py.
+let conversationId = null;
+const url = path => (BASE ? BASE.replace(/\/+$/, "") : "") + path;
+const API = () => url("/api/v1");
+
+// The API-key middleware is off by default. If you set API_KEY in .env, put the
+// same value here (or in localStorage under "apiKey") so requests are accepted.
+const apiKey = store("apiKey") || "";
+const headers = () => apiKey ? { "Content-Type": "application/json", "x-api-key": apiKey }
+                             : { "Content-Type": "application/json" };
+
+const EXAMPLES = [
+  "What is the excess on a claim?",
+  "What are the main exclusions?",
+  "How long do I have to report a claim?",
+  "What is the free look period?",
+  "What is the capital of France?",
+];
+
+function showError(msg) {
+  $("error").innerHTML = msg ? `<div class="err">${escapeHtml(msg)}</div>` : "";
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+// Turn the model's [1] [2] citation markers into visible highlights.
+function markCitations(text) {
+  return escapeHtml(text).replace(/\[(\d{1,2})\]/g, '<mark>[$1]</mark>');
+}
+
+async function health() {
+  try {
+    const r = await fetch(url("/health"));
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    $("dot").className = "dot up";
+    $("health").textContent = `${d.indexed_chunks} chunks / ${d.indexed_documents} docs`;
+    showError("");
+    return true;
+  } catch (e) {
+    $("dot").className = "dot down";
+    $("health").textContent = "not connected";
+    // The single most common cause, spelled out, because a bare "Failed to
+    // fetch" gives the reader nothing to act on.
+    showError(
+      `Cannot reach the API at ${url("/health") || "(same origin)"}.
+
+` +
+      (location.protocol === "file:"
+        ? "This page was opened from disk, so it needs an absolute API URL. " +
+          "Set the API box above to http://127.0.0.1:8000, or better, open " +
+          "http://127.0.0.1:8000/ and use the copy the server hosts."
+        : "Check that uvicorn is running, and that the API box above points at it.")
+    );
+    return false;
+  }
+}
+
+async function loadDocs() {
+  try {
+    const r = await fetch(`${API()}/documents/status`, { headers: headers() });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const docs = await r.json();
+    const sel = $("doc");
+    sel.innerHTML = '<option value="">all documents</option>';
+    $("docs").innerHTML = docs.length ? "" : '<div class="hint">Nothing indexed yet.</div>';
+    for (const d of docs) {
+      sel.insertAdjacentHTML("beforeend",
+        `<option value="${escapeHtml(d.document_id)}">${escapeHtml(d.filename)}</option>`);
+      $("docs").insertAdjacentHTML("beforeend", `
+        <div class="doc">
+          <span class="doc-name">${escapeHtml(d.filename)}</span>
+          <span class="doc-meta">${d.page_count ?? "?"}p &middot; ${d.chunk_count ?? "?"} chunks
+            <button class="ghost" data-del="${escapeHtml(d.document_id)}"
+              style="padding:1px 7px;font-size:11px;margin-left:6px;">delete</button>
+          </span>
+        </div>`);
+    }
+  } catch (e) {
+    $("docs").innerHTML = `<div class="hint">Could not load documents: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+$("docs").addEventListener("click", async ev => {
+  const id = ev.target.dataset?.del;
+  if (!id || !confirm("Delete this document and its vectors?")) return;
+  await fetch(`${API()}/documents/${id}`, { method: "DELETE", headers: headers() });
+  await Promise.all([loadDocs(), health()]);
+});
+
+function renderSources(sources, floor) {
+  $("srccount").textContent = sources.length ? `(${sources.length})` : "";
+  if (!sources.length) {
+    $("sources").innerHTML = '<div class="hint">No chunks passed the similarity floor, so no model call was made.</div>';
+    return;
+  }
+  $("sources").innerHTML = sources.map(s => `
+    <div class="src"${floor != null && s.score < floor ? ' style="opacity:.5"' : ""}>
+      <div class="src-head">
+        <span class="src-num">[${s.number}]</span>
+        <span class="src-cite">${escapeHtml(s.citation)}</span>
+        <span class="src-score">score ${s.score.toFixed(3)}${floor != null && s.score < floor ? " &middot; below floor" : ""}</span>
+      </div>
+      <div class="bar"><i style="width:${Math.max(0, Math.min(1, s.score)) * 100}%"></i></div>
+      <div class="excerpt" onclick="this.classList.toggle('open')">${escapeHtml(s.excerpt)}</div>
+    </div>`).join("");
+}
+
+async function ask() {
+  const query = $("q").value.trim();
+  if (!query) return;
+  showError("");
+  $("meta").innerHTML = "";
+  $("sources").innerHTML = '<div class="hint">searching...</div>';
+  $("answer").innerHTML = '<span class="spin"></span>';
+  $("ask").disabled = true;
+  const started = performance.now();
+
+  // Only what a client can meaningfully supply. top_k is the server's call.
+  const body = JSON.stringify({
+    query,
+    conversation_id: conversationId,
+    document_id: $("doc").value || null,
+  });
+
+  try {
+    if ($("stream").checked) {
+      const r = await fetch(`${API()}/chat/ask/stream`, { method: "POST", headers: headers(), body });
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${(await r.text()).slice(0, 300)}`);
+      conversationId = r.headers.get("x-conversation-id") || conversationId;
+      const reader = r.body.getReader(), dec = new TextDecoder();
+      let text = "";
+      $("answer").innerHTML = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        text += dec.decode(value, { stream: true });
+        $("answer").innerHTML = markCitations(text);
+      }
+      $("sources").innerHTML = '<div class="hint">The streaming endpoint returns text only. Untick "stream" to see sources and token counts.</div>';
+      $("meta").innerHTML = `<span class="pill">${((performance.now() - started) / 1000).toFixed(1)}s</span>`;
+    } else {
+      const r = await fetch(`${API()}/chat/ask`, { method: "POST", headers: headers(), body });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+      conversationId = data.conversation_id || conversationId;
+      $("answer").innerHTML = markCitations(data.answer);
+      renderSources(data.sources || []);
+      const d = data.diagnostics || {};
+      $("meta").innerHTML = [
+        `<span class="pill ${data.grounded ? "grounded" : "ungrounded"}">${data.grounded ? "grounded" : "not grounded"}</span>`,
+        `<span class="pill">${((performance.now() - started) / 1000).toFixed(1)}s</span>`,
+        d.input_tokens ? `<span class="pill">${d.input_tokens} in / ${d.output_tokens} out tokens</span>` : "",
+        d.model ? `<span class="pill">${escapeHtml(d.model)}</span>` : "",
+        d.top_k ? `<span class="pill">top_k ${d.top_k} @ floor ${d.min_similarity}</span>` : "",
+        // A marker pointing at no source looks verifiable but is not, so say so
+        // rather than letting the reader trust it.
+        (d.invalid_citations || []).length
+          ? `<span class="pill ungrounded">unverified citation${d.invalid_citations.length > 1 ? "s" : ""}: ${d.invalid_citations.map(n => "[" + n + "]").join(" ")}</span>`
+          : "",
+      ].join("");
+    }
+  } catch (e) {
+    $("answer").innerHTML = "";
+    $("sources").innerHTML = "";
+    showError(e.message);
+  } finally {
+    $("ask").disabled = false;
+  }
+}
+
+// --- uploads ---
+async function upload(file) {
+  if (!file) return;
+  if (file.type !== "application/pdf") { $("uploadmsg").innerHTML = '<div class="err">Only PDF files are supported.</div>'; return; }
+  $("uploadmsg").innerHTML = '<div class="hint"><span class="spin"></span> indexing (parse, chunk, embed)...</div>';
+  const fd = new FormData();
+  fd.append("file", file);
+  try {
+    const h = apiKey ? { "x-api-key": apiKey } : {};
+    const r = await fetch(`${API()}/documents/upload`, { method: "POST", headers: h, body: fd });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.detail || `HTTP ${r.status}`);
+    $("uploadmsg").innerHTML = `<div class="hint" style="color:var(--ok)">Indexed ${escapeHtml(d.filename)} &mdash; ${d.page_count} pages, ${d.chunk_count} chunks.${d.message ? " " + escapeHtml(d.message) : ""}</div>`;
+    await Promise.all([loadDocs(), health()]);
+  } catch (e) {
+    $("uploadmsg").innerHTML = `<div class="err">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+$("drop").addEventListener("click", () => $("file").click());
+$("file").addEventListener("change", e => upload(e.target.files[0]));
+["dragenter", "dragover"].forEach(t => $("drop").addEventListener(t, e => { e.preventDefault(); $("drop").classList.add("over"); }));
+["dragleave", "drop"].forEach(t => $("drop").addEventListener(t, e => { e.preventDefault(); $("drop").classList.remove("over"); }));
+$("drop").addEventListener("drop", e => upload(e.dataTransfer.files[0]));
+
+// Retrieval-only probe. No model call, so it is free and instant. It answers
+// "was the right clause even retrieved?", which is a different question from
+// "did the model use it properly" and needs a different fix. apply_floor=false
+// so you can see what the similarity floor is throwing away.
+async function probe() {
+  const query = $("q").value.trim();
+  if (!query) return;
+  showError(""); $("meta").innerHTML = ""; $("answer").innerHTML = "";
+  $("sources").innerHTML = '<div class="hint">searching...</div>';
+  try {
+    const r = await fetch(`${API()}/retrieval/search`, {
+      method: "POST", headers: headers(),
+      body: JSON.stringify({
+        query,
+        top_k: 10,
+        document_ids: $("doc").value ? [$("doc").value] : null,
+        apply_floor: false,
+      }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.detail || `HTTP ${r.status}`);
+    renderSources(d.hits || [], d.min_similarity);
+    $("meta").innerHTML = [
+      '<span class="pill">retrieval only - no model call</span>',
+      `<span class="pill">${d.total_indexed} chunks indexed</span>`,
+      `<span class="pill">floor ${d.min_similarity} (not applied)</span>`,
+    ].join("");
+  } catch (e) {
+    $("sources").innerHTML = ""; showError(e.message);
+  }
+}
+$("probe").addEventListener("click", probe);
+$("ask").addEventListener("click", ask);
+$("clear").addEventListener("click", () => {
+  $("q").value = ""; $("answer").innerHTML = ""; $("meta").innerHTML = "";
+  $("sources").innerHTML = '<div class="hint">Ask a question to see which chunks were retrieved.</div>';
+  showError(""); $("srccount").textContent = "";
+});
+$("q").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) ask(); });
+$("refresh").addEventListener("click", () => Promise.all([loadDocs(), health()]));
+
+$("examples").innerHTML = EXAMPLES.map(q =>
+  `<button class="ghost" data-q="${escapeHtml(q)}">${escapeHtml(q)}</button>`).join("");
+$("examples").addEventListener("click", e => {
+  if (e.target.dataset.q) { $("q").value = e.target.dataset.q; ask(); }
+});
+
+// --- base URL control ---
+$("base").value = BASE;
+$("base").addEventListener("change", async () => {
+  BASE = $("base").value.trim().replace(/\/+$/, "");
+  store("apiBase", BASE);
+  if (await health()) loadDocs();
+});
+$("base").addEventListener("keydown", e => { if (e.key === "Enter") $("base").dispatchEvent(new Event("change")); });
+
+(async () => { if (await health()) loadDocs(); })();
+setInterval(health, 15000);
+</script>
+</body>
+</html>

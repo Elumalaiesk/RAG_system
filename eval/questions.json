@@ -1,0 +1,37 @@
+[
+  {
+    "question": "How much excess do I have to pay on a claim?",
+    "expect_any": ["compulsory excess", "excess of 5,000"],
+    "expect_pages": [1]
+  },
+  {
+    "question": "Am I covered if my car is stolen?",
+    "expect_any": ["burglary, housebreaking or theft", "theft"],
+    "expect_pages": [1]
+  },
+  {
+    "question": "Can I use the vehicle as a taxi?",
+    "expect_any": ["hire or reward", "carriage of goods"],
+    "expect_pages": [2]
+  },
+  {
+    "question": "What happens to my no claim bonus if I make a claim?",
+    "expect_any": ["No Claim Bonus is forfeited", "forfeited in full"],
+    "expect_pages": [3]
+  },
+  {
+    "question": "How long do I have to report an accident?",
+    "expect_any": ["within 48", "48 hours"],
+    "expect_pages": [3]
+  },
+  {
+    "question": "Is engine breakdown covered?",
+    "expect_any": ["mechanical or", "electrical breakdown"],
+    "expect_pages": [2]
+  },
+  {
+    "question": "What if the driver was drunk?",
+    "expect_any": ["intoxicating liquor", "under the influence"],
+    "expect_pages": [2]
+  }
+]
